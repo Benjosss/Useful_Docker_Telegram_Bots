@@ -75,24 +75,44 @@ def get_calendar_events():
         creds = Credentials.from_authorized_user_file('token.json', ['https://www.googleapis.com/auth/calendar.readonly'])
         service = build('calendar', 'v3', credentials=creds)
 
-        now = datetime.datetime.utcnow().isoformat() + 'Z'
-        end_of_day = (datetime.datetime.utcnow() + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0).isoformat() + 'Z'
+        # Fuseau horaire local (00:00:00 à 23:59:59 pour la journée en cours)
+        now_local = datetime.datetime.now().astimezone()
+        start_of_day = now_local.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        end_of_day = now_local.replace(hour=23, minute=59, second=59, microsecond=0).isoformat()
 
-        events_result = service.events().list(
-            calendarId='primary', timeMin=now, timeMax=end_of_day,
-            maxResults=5, singleEvents=True, orderBy='startTime'
-        ).execute()
-        events = events_result.get('items', [])
+        # Récupération de tous les calendriers de l'utilisateur
+        calendars_result = service.calendarList().list().execute()
+        calendars = calendars_result.get('items', [])
 
-        if not events:
+        all_events = []
+
+        for cal in calendars:
+            try:
+                events_result = service.events().list(
+                    calendarId=cal['id'], 
+                    timeMin=start_of_day, 
+                    timeMax=end_of_day,
+                    singleEvents=True, 
+                    orderBy='startTime'
+                ).execute()
+                all_events.extend(events_result.get('items', []))
+            except Exception:
+                continue
+
+        if not all_events:
             return "📅 *Calendar* : No events for today. 🎉"
 
+        # Tri de tous les événements récupérés par heure de début
+        all_events.sort(key=lambda x: x['start'].get('dateTime', x['start'].get('date')))
+
         agenda = "📅 *Today program* :\n"
-        for event in events:
+        for event in all_events:
             start = event['start'].get('dateTime', event['start'].get('date'))
+            summary = event.get('summary', 'No title')
             time_str = "All day " if 'T' not in start else datetime.datetime.fromisoformat(start).strftime('%H:%M')
-            agenda += f"🔹 {time_str} - {event['summary']}\n"
+            agenda += f"🔹 {time_str} - {summary}\n"
         return agenda
+
     except Exception as e:
         return f"📅 *Calendar* : Sync error ({e})"
 
