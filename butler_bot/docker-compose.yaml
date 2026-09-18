@@ -1,0 +1,12 @@
+services:
+  bot_butler:
+    build: .
+    container_name: bot_butler
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+      - TELEGRAM_CHAT_ID=your_telegram_account_id
+      - TZ=Europe/Paris
+    volumes:
+      # Google Auth files mount into the container
+      - ./token.json:/app/token.json:ro # Get Auth token from Google Cloud Console

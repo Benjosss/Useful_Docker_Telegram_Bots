@@ -1,0 +1,17 @@
+services:
+  bot_server_monitoring:
+    build: .
+    container_name: bot_server_monitoring
+    restart: unless-stopped
+    # For reading HOST data
+    pid: "host"
+    volumes:
+      # For psutil to read HOST disk data
+      - /:/host/root:ro
+    environment:
+      - TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+      - TELEGRAM_CHAT_ID=your_telegram_account_id
+      - CPU_THRESHOLD=85.0
+      - RAM_THRESHOLD=90.0
+      - DISK_THRESHOLD=90.0
+      - CHECK_INTERVAL=60
